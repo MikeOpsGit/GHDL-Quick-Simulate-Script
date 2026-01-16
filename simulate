@@ -1,0 +1,139 @@
+#!/bin/bash
+# ==============================================================================================
+#                                         Bash Constants                                        
+# ==============================================================================================
+true=0
+false=1
+success=0
+fail=1
+
+# ==============================================================================================
+#                                          Parse Args
+# ==============================================================================================
+if [ $# -lt 1 ]; then
+    echo "Usage: $0 <testbench_file.vhd> [entity_name]"
+    exit 1
+fi
+
+output_file=""
+import_path=""
+file=""
+entity=""
+no_open=$false
+no_import=$false
+while [ $# -gt 0 ]; do
+    case $1 in
+        "-o")
+            shift
+            output_file=$1
+            ;;
+        
+        "-i")
+            shift
+            import_path=$1
+            ;;
+        
+        "--no-open")
+            no_open=$true
+            ;;
+        
+        "--no-import")
+            no_import=$true
+            ;;
+        
+        -*)
+            echo "Error: '$1' flag is not recognized, skipping..." >&2
+            ;;
+        
+        # Assume arg is path. Fix path to be relative to root of the git repo instead of user's terminal pwd.
+        *)
+            if [ -z "$file" ]; then
+                file="$1"
+            elif [ -z "$entity" ]; then
+                entity="$1"
+            fi
+            ;;
+    esac
+    shift
+done
+
+# ==============================================================================================
+#                               Get Entity to Compile and Simulate
+# ==============================================================================================
+if [ -z "$entity" ]; then
+    entities=($(ghdl files $file | grep "^entity " | sed 's/entity \([^ ]*\).*/\1/'))
+    if [ ${#entities[@]} -eq 0 ]; then
+        echo "No entities found in $file"
+        exit $fail
+
+    elif [ ${#entities[@]} -eq 1 ]; then
+        entity=${entities[0]}
+
+    else
+        echo "Multiple entities found in $file:"
+        for i in "${!entities[@]}"; do
+            echo "$i: ${entities[$i]}"
+        done
+        read -p "Enter index or entity name to compile and simulate: " input
+        if [[ $input =~ ^[0-9]+$ ]] && [ $input -ge 0 ] && [ $input -lt ${#entities[@]} ]; then
+            entity=${entities[$input]}
+        elif [[ " ${entities[@]} " =~ " $input " ]]; then
+            entity=$input
+        else
+            echo "Invalid input"
+            exit $fail
+        fi
+        echo
+    fi
+fi
+
+# ==============================================================================================
+#                                     Import all .vhd files
+# ==============================================================================================
+if [ "$no_import" = "$false" ]; then
+    echo -n "Importing vhdl files..."
+    if [ -n "$import_path" ]; then
+        ghdl -i $(find $import_path -name "*.vhd" -type f)
+    else
+        ghdl -i $(find . -name "*.vhd" -type f)
+    fi
+
+    if [ $? -ne $success ]; then exit $fail; fi
+    echo "Done"
+fi
+
+# ==============================================================================================
+#                                       Compile the Entity
+# ==============================================================================================
+echo -n "Building $entity..."
+ghdl -m $entity
+if [ $? -ne $success ]; then exit $fail; fi
+echo "Done"
+
+# ==============================================================================================
+#                                     Generate the Waveform
+# ==============================================================================================
+echo -n "Creating waveform for $entity..."
+if [ -n "$output_file" ]; then
+    ghdl -r $entity --wave=$output_file
+else
+    ghdl -r $entity --wave=$entity.ghw
+fi
+
+if [ $? -ne $success ]; then exit $fail; fi
+echo "Done"
+
+
+# ==============================================================================================
+#                                Open the .ghw file with GTKWave
+# ==============================================================================================
+if [ "$no_open" = "$false" ] && [ -z "$output_file" ]; then
+    echo -n "Opening gtkwave for $entity..."
+    gtkwave $entity.ghw --dark > /dev/null 2>&1 &
+    echo "Done"
+
+elif [ "$no_open" = "$false" ] && [ -n "$output_file" ]; then
+    echo -n "Opening gtkwave for $entity..."
+    gtkwave $output_file --dark > /dev/null 2>&1 &
+    echo "Done"
+fi
