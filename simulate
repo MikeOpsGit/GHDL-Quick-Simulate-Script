@@ -11,8 +11,18 @@ fail=1
 #                                          Parse Args
 # ==============================================================================================
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <testbench_file.vhd> [entity_name]"
-    exit 1
+    echo "Usage: $0 <file_to_simulate.vhd> [entity_name] [options]"
+    echo ""
+    echo "Arguments:"
+    echo "  file_to_simulate.vhd  The VHDL testbench file to simulate"
+    echo "  entity_name           The entity name to simulate (optional, will prompt if multiple)"
+    echo ""
+    echo "Options:"
+    echo "  -o output_file        Specify the output waveform file (default: entity.ghw)"
+    echo "  -i import_path        Path to search for VHDL files to import (default: current directory)"
+    echo "  --no-open             Do not open the waveform in GTKWave"
+    echo "  --no-import           Do not import VHDL files"
+    exit $fail
 fi
 
 output_file=""
