@@ -1,4 +1,4 @@
-# simulate
+# GHDL Quick Simulate Script
 A bash script to simplify VHDL simulation using GHDL and GTKWave.
 
 ## Description
