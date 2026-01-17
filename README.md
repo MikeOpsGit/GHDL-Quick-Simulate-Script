@@ -22,6 +22,8 @@ Options:
 
 - `--no-open`: Do not open the waveform in GTKWave
 
+- `ghdl --help-options`: Most options listed there can be passed to the simulate script and will be passed to GHDL during the import process.
+
 Run `./simulate` with no arguments to see the full help message.
 
 Example:

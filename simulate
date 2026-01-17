@@ -22,6 +22,7 @@ if [ $# -lt 1 ]; then
     echo "  -i import_path        Path to search for VHDL files to import (default: current directory)"
     echo "  --no-open             Do not open the waveform in GTKWave"
     echo "  --no-import           Do not import VHDL files"
+    echo "  [ghdl options]        see ghdl --help-options"
     exit $fail
 fi
 
@@ -31,16 +32,17 @@ file=""
 entity=""
 no_open=$false
 no_import=$false
+import_flags=()
 while [ $# -gt 0 ]; do
     case $1 in
         "-o")
             shift
-            output_file=$1
+            output_file="$1"
             ;;
         
         "-i")
             shift
-            import_path=$1
+            import_path="$1"
             ;;
         
         "--no-open")
@@ -49,6 +51,18 @@ while [ $# -gt 0 ]; do
         
         "--no-import")
             no_import=$true
+            ;;
+        
+        "-Wall")
+            import_flags+=("$1")
+            ;;
+        
+        "-Werror")
+            import_flags+=("$1")
+            ;;
+        
+        --std=*)
+            import_flags+=("$1")
             ;;
         
         -*)
@@ -103,9 +117,9 @@ fi
 if [ "$no_import" = "$false" ]; then
     echo -n "Importing vhdl files..."
     if [ -n "$import_path" ]; then
-        ghdl -i $(find $import_path -name "*.vhd" -type f)
+        ghdl -i "${import_flags[@]}" $(find $import_path -name "*.vhd" -type f)
     else
-        ghdl -i $(find . -name "*.vhd" -type f)
+        ghdl -i "${import_flags[@]}" $(find . -name "*.vhd" -type f)
     fi
 
     if [ $? -ne $success ]; then exit $fail; fi
