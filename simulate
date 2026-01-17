@@ -67,6 +67,7 @@ while [ $# -gt 0 ]; do
         
         -*)
             echo "Error: '$1' flag is not recognized, skipping..." >&2
+            exit $fail
             ;;
         
         # Assume arg is path. Fix path to be relative to root of the git repo instead of user's terminal pwd.
